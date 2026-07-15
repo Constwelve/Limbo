@@ -46,15 +46,18 @@ struct GeneralName
 {
     std::string name; ///< name string, empty if not specified
     Range range; ///< min infinity if not specified 
+    int constant_bits; ///< width when name is CONSTANT_NET, otherwise zero
 
     /// @brief constructor 
     /// @param n name 
-    GeneralName(std::string const& n = "") {name = n; range.low = range.high = std::numeric_limits<int>::min();}
+    GeneralName(std::string const& n = "") {name = n; range.low = range.high = std::numeric_limits<int>::min(); constant_bits = 0;}
     /// @brief constructor 
     /// @param n name 
     /// @param low low value of range 
     /// @param high high value of range 
-    GeneralName(std::string const& n, int low, int high) {name = n; range.low = low; range.high = high;}
+    GeneralName(std::string const& n, int low, int high) {name = n; range.low = low; range.high = high; constant_bits = 0;}
+    /// @brief constructor for a sized constant in a concatenation
+    explicit GeneralName(int bits) {name = "VerilogParser::CONSTANT_NET"; range.low = range.high = std::numeric_limits<int>::min(); constant_bits = bits;}
 };
 
 /// @brief Describe the connection of pins to nets. 

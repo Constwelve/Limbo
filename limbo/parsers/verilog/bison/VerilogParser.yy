@@ -158,6 +158,10 @@ general_name_array: NAME {
           delete $1;
           delete $2; 
         }
+        | BIT_MASK {$$ = new GeneralNameArray(1, GeneralName($1.bits));}
+        | OCT_MASK {$$ = new GeneralNameArray(1, GeneralName($1.bits));}
+        | DEC_MASK {$$ = new GeneralNameArray(1, GeneralName($1.bits));}
+        | HEX_MASK {$$ = new GeneralNameArray(1, GeneralName($1.bits));}
         | general_name_array ',' NAME {
             $1->push_back(GeneralName(*$3));
             delete $3;
@@ -169,6 +173,11 @@ general_name_array: NAME {
             delete $4; 
             $$ = $1;
         }
+        | general_name_array ',' BIT_MASK {$1->push_back(GeneralName($3.bits)); $$ = $1;}
+        | general_name_array ',' OCT_MASK {$1->push_back(GeneralName($3.bits)); $$ = $1;}
+        | general_name_array ',' DEC_MASK {$1->push_back(GeneralName($3.bits)); $$ = $1;}
+        | general_name_array ',' HEX_MASK {$1->push_back(GeneralName($3.bits)); $$ = $1;}
+        ;
 
 /*
 param1: NAME {delete $1;}
@@ -258,6 +267,20 @@ assignment: ASSIGN NAME '=' NAME ';' {driver.assignment_cbk(*$2, Range(), *$4, R
           | ASSIGN NAME range '=' NAME ';' {driver.assignment_cbk(*$2, *$3, *$5, Range()); delete $2; delete $3; delete $5;}
           | ASSIGN NAME '=' NAME range ';' {driver.assignment_cbk(*$2, Range(), *$4, *$5); delete $2; delete $4; delete $5;}
           | ASSIGN NAME range '=' NAME range ';' {driver.assignment_cbk(*$2, *$3, *$5, *$6); delete $2; delete $3; delete $5; delete $6;}
+          | ASSIGN NAME '=' BIT_MASK ';' {driver.assignment_cbk(*$2, Range(), "VerilogParser::CONSTANT_NET", Range()); delete $2;}
+          | ASSIGN NAME '=' OCT_MASK ';' {driver.assignment_cbk(*$2, Range(), "VerilogParser::CONSTANT_NET", Range()); delete $2;}
+          | ASSIGN NAME '=' DEC_MASK ';' {driver.assignment_cbk(*$2, Range(), "VerilogParser::CONSTANT_NET", Range()); delete $2;}
+          | ASSIGN NAME '=' HEX_MASK ';' {driver.assignment_cbk(*$2, Range(), "VerilogParser::CONSTANT_NET", Range()); delete $2;}
+          | ASSIGN NAME range '=' BIT_MASK ';' {driver.assignment_cbk(*$2, *$3, "VerilogParser::CONSTANT_NET", Range()); delete $2; delete $3;}
+          | ASSIGN NAME range '=' OCT_MASK ';' {driver.assignment_cbk(*$2, *$3, "VerilogParser::CONSTANT_NET", Range()); delete $2; delete $3;}
+          | ASSIGN NAME range '=' DEC_MASK ';' {driver.assignment_cbk(*$2, *$3, "VerilogParser::CONSTANT_NET", Range()); delete $2; delete $3;}
+          | ASSIGN NAME range '=' HEX_MASK ';' {driver.assignment_cbk(*$2, *$3, "VerilogParser::CONSTANT_NET", Range()); delete $2; delete $3;}
+          /* Unsupported RHS (expressions, ternaries, concatenations, arithmetic):
+           * recover by discarding the statement up to ';' instead of aborting the
+           * whole parse. Restores the pre-change "skip unknown assign" behaviour so
+           * only the alias is lost, not the entire netlist. */
+          | ASSIGN error ';' {yyerrok;}
+          ;
 
 module_content: /* empty */
               | module_content variable_declare
