@@ -102,7 +102,8 @@ public:
     void pin_declare_cbk(std::vector<GeneralName> const&, unsigned, Range const&);
     void pin_declare_cbk(std::vector<GeneralName> const&, unsigned);
     void module_instance_cbk(std::string const&, std::string const&);
-    void assignment_cbk(std::string const&, Range const&, std::string const&, Range const&); 
+    void assignment_cbk(std::string const&, Range const&, std::string const&, Range const&);
+    void unsupported_assignment_cbk();
     /// @endcond
 
 protected:

@@ -254,7 +254,11 @@ class VerilogDataBase
         /// @param target_range range of left hand side, negative infinity if either low or high value of the range is not defined 
         /// @param source_name name of right hand side 
         /// @param source_range range of right hand side, negative infinity if either low or high value of the range is not defined 
-        virtual void verilog_assignment_cbk(std::string const& target_name, Range const& target_range, std::string const& source_name, Range const& source_range); 
+        virtual void verilog_assignment_cbk(std::string const& target_name, Range const& target_range, std::string const& source_name, Range const& source_range);
+        /// @brief called when an assign statement with an unsupported right hand
+        /// side (expression, ternary, concatenation, arithmetic) is skipped via
+        /// error recovery. Lets a consumer count/report the dropped connectivity.
+        virtual void verilog_unsupported_assignment_cbk() {}
 
     protected:
         /// @brief remind users to define some optional callback functions at runtime 

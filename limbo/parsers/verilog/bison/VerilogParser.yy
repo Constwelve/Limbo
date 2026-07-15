@@ -279,7 +279,7 @@ assignment: ASSIGN NAME '=' NAME ';' {driver.assignment_cbk(*$2, Range(), *$4, R
            * recover by discarding the statement up to ';' instead of aborting the
            * whole parse. Restores the pre-change "skip unknown assign" behaviour so
            * only the alias is lost, not the entire netlist. */
-          | ASSIGN error ';' {yyerrok;}
+          | ASSIGN error ';' {driver.unsupported_assignment_cbk(); yyerrok;}
           ;
 
 module_content: /* empty */
