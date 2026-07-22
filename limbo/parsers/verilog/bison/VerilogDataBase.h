@@ -255,8 +255,45 @@ class VerilogDataBase
         /// @param source_name name of right hand side 
         /// @param source_range range of right hand side, negative infinity if either low or high value of the range is not defined 
         virtual void verilog_assignment_cbk(std::string const& target_name, Range const& target_range, std::string const& source_name, Range const& source_range);
+        /// @brief called for a continuous assignment whose right hand side is a
+        /// concatenation: `assign lhs = {a, b[3], 2'b00};`. The elements are
+        /// given left to right, i.e. most significant first, matching Verilog
+        /// concatenation order. Pairing them with the left hand side's bits
+        /// needs the declared net widths, which the parser does not track, so
+        /// the database resolves that itself.
+        /// @param target_name name of left hand side
+        /// @param target_range range of left hand side, negative infinity if unset
+        /// @param source_names concatenation elements, most significant first
+        /// The default forwards to verilog_unsupported_assignment_cbk() so a
+        /// database that does not implement it keeps the previous behaviour
+        /// (statement dropped and counted) rather than silently losing the net.
+        virtual void verilog_assignment_concat_cbk(std::string const& target_name, Range const& target_range, std::vector<GeneralName> const& source_names)
+        {
+            (void)target_name; (void)target_range; (void)source_names;
+            verilog_unsupported_assignment_cbk();
+        }
+        /// @brief called for a continuous assignment whose LEFT hand side is a
+        /// concatenation: `assign {a, b, c} = bus;`. Elements are given most
+        /// significant first. The default forwards to
+        /// verilog_unsupported_assignment_cbk() for source compatibility.
+        /// @param target_names concatenation elements, most significant first
+        /// @param source_name name of right hand side
+        /// @param source_range range of right hand side, negative infinity if unset
+        virtual void verilog_concat_assignment_cbk(std::vector<GeneralName> const& target_names, std::string const& source_name, Range const& source_range)
+        {
+            (void)target_names; (void)source_name; (void)source_range;
+            verilog_unsupported_assignment_cbk();
+        }
+        /// @brief called for a continuous assignment with a concatenation on
+        /// both sides: `assign {a, b} = {c, d};`. Both lists are most
+        /// significant first. Default forwards to the unsupported callback.
+        virtual void verilog_concat2_assignment_cbk(std::vector<GeneralName> const& target_names, std::vector<GeneralName> const& source_names)
+        {
+            (void)target_names; (void)source_names;
+            verilog_unsupported_assignment_cbk();
+        }
         /// @brief called when an assign statement with an unsupported right hand
-        /// side (expression, ternary, concatenation, arithmetic) is skipped via
+        /// side (expression, ternary, arithmetic) is skipped via
         /// error recovery. Lets a consumer count/report the dropped connectivity.
         virtual void verilog_unsupported_assignment_cbk() {}
 
