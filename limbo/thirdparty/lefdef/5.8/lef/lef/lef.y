@@ -363,11 +363,14 @@ version: K_VERSION { lefData->lefDumbMode = 1; lefData->lefNoNum = 1;} T_STRING 
 
          lefData->versionNum = convert_name2num($3);
          if (lefData->versionNum > CURRENT_VERSION) {
-            char temp[120];
+            // Newer files (e.g. VERSION 6.0 tech LEFs) are read with the
+            // CURRENT_VERSION grammar; constructs it lacks still fail as
+            // syntax errors, so only the version gate is relaxed.
+            char temp[160];
             sprintf(temp,
-               "Lef parser %.1f does not support lef file with version %s. Parser will stop processing.", CURRENT_VERSION, $3);
-            lefError(1503, temp);
-            return 1;
+               "Lef parser %.1f reads lef file with version %s as version %.1f.", CURRENT_VERSION, $3, CURRENT_VERSION);
+            lefWarning(2504, temp);
+            lefData->versionNum = CURRENT_VERSION;
          }
 
          if (lefCallbacks->VersionStrCbk) {

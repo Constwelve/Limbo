@@ -158,6 +158,10 @@ general_name_array: NAME {
           delete $1;
           delete $2; 
         }
+        | BIT_MASK {$$ = new GeneralNameArray(1, GeneralName($1.bits));}
+        | OCT_MASK {$$ = new GeneralNameArray(1, GeneralName($1.bits));}
+        | DEC_MASK {$$ = new GeneralNameArray(1, GeneralName($1.bits));}
+        | HEX_MASK {$$ = new GeneralNameArray(1, GeneralName($1.bits));}
         | general_name_array ',' NAME {
             $1->push_back(GeneralName(*$3));
             delete $3;
@@ -169,6 +173,11 @@ general_name_array: NAME {
             delete $4; 
             $$ = $1;
         }
+        | general_name_array ',' BIT_MASK {$1->push_back(GeneralName($3.bits)); $$ = $1;}
+        | general_name_array ',' OCT_MASK {$1->push_back(GeneralName($3.bits)); $$ = $1;}
+        | general_name_array ',' DEC_MASK {$1->push_back(GeneralName($3.bits)); $$ = $1;}
+        | general_name_array ',' HEX_MASK {$1->push_back(GeneralName($3.bits)); $$ = $1;}
+        ;
 
 /*
 param1: NAME {delete $1;}
@@ -258,6 +267,44 @@ assignment: ASSIGN NAME '=' NAME ';' {driver.assignment_cbk(*$2, Range(), *$4, R
           | ASSIGN NAME range '=' NAME ';' {driver.assignment_cbk(*$2, *$3, *$5, Range()); delete $2; delete $3; delete $5;}
           | ASSIGN NAME '=' NAME range ';' {driver.assignment_cbk(*$2, Range(), *$4, *$5); delete $2; delete $4; delete $5;}
           | ASSIGN NAME range '=' NAME range ';' {driver.assignment_cbk(*$2, *$3, *$5, *$6); delete $2; delete $3; delete $5; delete $6;}
+          | ASSIGN NAME '=' BIT_MASK ';' {driver.assignment_cbk(*$2, Range(), "VerilogParser::CONSTANT_NET", Range()); delete $2;}
+          | ASSIGN NAME '=' OCT_MASK ';' {driver.assignment_cbk(*$2, Range(), "VerilogParser::CONSTANT_NET", Range()); delete $2;}
+          | ASSIGN NAME '=' DEC_MASK ';' {driver.assignment_cbk(*$2, Range(), "VerilogParser::CONSTANT_NET", Range()); delete $2;}
+          | ASSIGN NAME '=' HEX_MASK ';' {driver.assignment_cbk(*$2, Range(), "VerilogParser::CONSTANT_NET", Range()); delete $2;}
+          | ASSIGN NAME range '=' BIT_MASK ';' {driver.assignment_cbk(*$2, *$3, "VerilogParser::CONSTANT_NET", Range()); delete $2; delete $3;}
+          | ASSIGN NAME range '=' OCT_MASK ';' {driver.assignment_cbk(*$2, *$3, "VerilogParser::CONSTANT_NET", Range()); delete $2; delete $3;}
+          | ASSIGN NAME range '=' DEC_MASK ';' {driver.assignment_cbk(*$2, *$3, "VerilogParser::CONSTANT_NET", Range()); delete $2; delete $3;}
+          | ASSIGN NAME range '=' HEX_MASK ';' {driver.assignment_cbk(*$2, *$3, "VerilogParser::CONSTANT_NET", Range()); delete $2; delete $3;}
+          /* Concatenation RHS: `assign lhs = {a, b[3], 2'b00};`. Structural
+           * netlists use this to wire a bus port, e.g. flattened hierarchy
+           * inlining a multi-bit helper module. The bit pairing (LHS bits to
+           * the flattened RHS, most significant first) needs net widths that
+           * only the database knows, so pass the list through and let the
+           * callback resolve it. Mirrors the '{' general_name_array '}' form
+           * already accepted for instance ports (param2). */
+          | ASSIGN NAME '=' '{' general_name_array '}' ';' {driver.assignment_concat_cbk(*$2, Range(), *$5); delete $2; delete $5;}
+          | ASSIGN NAME range '=' '{' general_name_array '}' ';' {driver.assignment_concat_cbk(*$2, *$3, *$6); delete $2; delete $3; delete $6;}
+          | ASSIGN NAME '=' '{' general_name_array ',' '}' ';' {driver.assignment_concat_cbk(*$2, Range(), *$5); delete $2; delete $5;}
+          | ASSIGN NAME range '=' '{' general_name_array ',' '}' ';' {driver.assignment_concat_cbk(*$2, *$3, *$6); delete $2; delete $3; delete $6;}
+          /* Concatenation LHS: `assign {a, b, c} = bus;`. The mirror of the
+           * above -- a flattened helper's output bus fanning out to individual
+           * nets. Represented by swapping the roles: the concatenation becomes
+           * the target list and the single name the source, resolved by the
+           * same positional pairing. */
+          | ASSIGN '{' general_name_array '}' '=' NAME ';' {driver.concat_assignment_cbk(*$3, *$6, Range()); delete $3; delete $6;}
+          | ASSIGN '{' general_name_array '}' '=' NAME range ';' {driver.concat_assignment_cbk(*$3, *$6, *$7); delete $3; delete $6; delete $7;}
+          | ASSIGN '{' general_name_array ',' '}' '=' NAME ';' {driver.concat_assignment_cbk(*$3, *$7, Range()); delete $3; delete $7;}
+          | ASSIGN '{' general_name_array ',' '}' '=' NAME range ';' {driver.concat_assignment_cbk(*$3, *$7, *$8); delete $3; delete $7; delete $8;}
+          /* Concatenation on BOTH sides: `assign {a, b} = {c, d};`. Legal
+           * Verilog and a natural product of hierarchy flattening; without
+           * this production it would fall into error recovery. */
+          | ASSIGN '{' general_name_array '}' '=' '{' general_name_array '}' ';' {driver.concat2_assignment_cbk(*$3, *$7); delete $3; delete $7;}
+          /* Unsupported RHS (expressions, ternaries, arithmetic):
+           * recover by discarding the statement up to ';' instead of aborting the
+           * whole parse. Restores the pre-change "skip unknown assign" behaviour so
+           * only the alias is lost, not the entire netlist. */
+          | ASSIGN error ';' {driver.unsupported_assignment_cbk(); yyerrok;}
+          ;
 
 module_content: /* empty */
               | module_content variable_declare

@@ -79,9 +79,25 @@ void Driver::module_instance_cbk(std::string const& macro_name, std::string cons
 	m_vNetPin.clear();
 }
 
-void Driver::assignment_cbk(std::string const& target_name, Range const& target_range, std::string const& source_name, Range const& source_range) 
+void Driver::assignment_cbk(std::string const& target_name, Range const& target_range, std::string const& source_name, Range const& source_range)
 {
     m_db.verilog_assignment_cbk(target_name, target_range, source_name, source_range);
+}
+void Driver::assignment_concat_cbk(std::string const& target_name, Range const& target_range, std::vector<GeneralName> const& source_names)
+{
+    m_db.verilog_assignment_concat_cbk(target_name, target_range, source_names);
+}
+void Driver::concat_assignment_cbk(std::vector<GeneralName> const& target_names, std::string const& source_name, Range const& source_range)
+{
+    m_db.verilog_concat_assignment_cbk(target_names, source_name, source_range);
+}
+void Driver::concat2_assignment_cbk(std::vector<GeneralName> const& target_names, std::vector<GeneralName> const& source_names)
+{
+    m_db.verilog_concat2_assignment_cbk(target_names, source_names);
+}
+void Driver::unsupported_assignment_cbk()
+{
+    m_db.verilog_unsupported_assignment_cbk();
 }
 
 void Driver::wire_pin_cbk(std::string& net_name, std::string& pin_name, Range const& range)
